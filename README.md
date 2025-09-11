@@ -1,0 +1,2 @@
+# CORE_Austere
+CORE SCOUT
