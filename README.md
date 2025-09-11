@@ -1,2 +1,2 @@
 # CORE_Austere
-CORE SCOUT
+Lightweight version of CORE (SCOUT) for downrange and offline use.

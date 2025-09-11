@@ -1,0 +1,66 @@
+.settings-container {
+  display: flex;
+  margin-top: calc(11%);
+  flex-direction: column;
+  align-items: center;
+  justify-content: start;
+  padding: 2rem;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+.settings-container h2 {
+  color: #ccbc82;
+  text-shadow:
+    -1px -1px 0 #978b5f,
+    1px -1px 0 #978b5f,
+    -1px 1px 0 #978b5f,
+    1px 1px 0 #978b5f;
+}
+
+.upload-box {
+  width: 80%;
+  max-width: 600px;
+  min-height: 200px;
+  border: 2px dashed #888;
+  border-radius: 8px;
+  background: #f9f9f9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.upload-box:hover {
+  background: #f0f0f0;
+}
+
+.upload-box p {
+  margin: 0.5rem 0;
+  color: #555;
+  font-size: 1rem;
+}
+
+.select-db-button {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 20px;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.select-db-button:hover {
+  background-color: #0056b3;
+}
+
+.status-text {
+  margin-top: 1rem;
+  font-style: italic;
+  color: #ccbc82;
+}

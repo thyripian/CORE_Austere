@@ -1,0 +1,53 @@
+{
+  "name": "core-scout",
+  "version": "1.0.0",
+  "description": "CORE-Scout desktop application",
+  "main": "electron-main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "dependencies": {
+    "cross-spawn": "^7.0.0"
+  },
+  "devDependencies": {
+    "electron": "^24.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.389MIB.corescout",
+    "productName": "Scout",
+    "files": [
+      "electron-main.js",
+      "preload.js",
+      "run_app.py",
+      "apply_schema.py",
+      "database_operations/**",
+      "config/**",
+      "assets/**",
+      {
+        "from": "user_interface/build",
+        "to": "user_interface/build",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "directories": {
+      "buildResources": "assets",
+      "output": "dist"
+    },
+    "win": {
+      "target": "portable",
+      "icon": "assets/app-icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/app-icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets"
+    }
+  }
+}
