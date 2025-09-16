@@ -1,7 +1,8 @@
 .full-report-container {
     margin-top: 75px;
-    max-width: 90vw;
-    height: 80vh;
+    max-width: 75vw;
+    width: 75vw;
+    max-height: 80vh;
     overflow-y: auto;
     padding: 20px;
     background-color: #272727;
@@ -9,12 +10,68 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     color: #ffffff;
     font-family: 'Roboto', sans-serif;
+    position: relative;
+}
+
+/* Custom scrollbar styling */
+.full-report-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.full-report-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.full-report-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+}
+
+.full-report-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+    .full-report-container {
+        max-width: 90vw;
+        width: 90vw;
+        padding: 15px;
+    }
 }
 
 .full-report-container h2 {
     font-size: 36px;
     color: #ffffff;
-    margin: -5px 0 25px 0;
+    margin: -5px 0 15px 0;
+}
+
+.report-context {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.table-badge,
+.record-id {
+    background-color: #444;
+    color: #ccc;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.table-badge {
+    background-color: #407236;
+    color: #fff;
+}
+
+.record-id {
+    background-color: #6c757d;
+    color: #fff;
 }
 
 .back-button {
@@ -36,6 +93,8 @@
     display: flex;
     flex-direction: column;
     gap: 20px;
+    padding-bottom: 2rem;
+    /* Extra space at bottom for better scrolling */
 }
 
 .form-group {
@@ -73,6 +132,8 @@
 
 .form-section {
     margin-top: 20px;
+    padding-bottom: 1rem;
+    /* Extra space for better scrolling */
 }
 
 .full-text {

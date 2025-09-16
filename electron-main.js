@@ -62,21 +62,39 @@ function getPythonExecutable() {
 // Launch or relaunch the Python FastAPI backend on the given port
 function startPythonBackend(dbPath) {
     if (pythonProcess) {
+        console.log('[Spawn] Killing existing Python process');
         pythonProcess.kill();
         pythonProcess = null;
     }
-    const pythonExe = getPythonExecutable();
-    const script = path.join(__dirname, 'run_app.py');
-    const args = ['--db', dbPath, '--port', String(apiPort)];
-    console.log(`[Spawn] ${pythonExe} ${script} ${args.join(' ')}`);
 
-    pythonProcess = spawn(pythonExe, [script, ...args], {
-        cwd: __dirname,
-        stdio: 'inherit'
-    });
+    // Give a moment for the process to fully terminate
+    setTimeout(() => {
+        const pythonExe = getPythonExecutable();
+        const script = path.join(__dirname, 'run_app_dynamic.py');
+        const args = ['--db', dbPath, '--port', String(apiPort)];
+        console.log(`[Spawn] Starting: ${pythonExe} ${script} ${args.join(' ')}`);
 
-    pythonProcess.on('error', err => console.error('Python error:', err));
-    pythonProcess.on('exit', code => console.log(`Python exited ${code}`));
+        pythonProcess = spawn(pythonExe, [script, ...args], {
+            cwd: __dirname,
+            stdio: 'inherit'
+        });
+
+        pythonProcess.on('error', err => {
+            console.error('Python error:', err);
+            console.error('Failed to start backend with database:', dbPath);
+        });
+        pythonProcess.on('exit', code => {
+            console.log(`Python exited with code ${code}`);
+            if (code !== 0) {
+                console.error('Backend failed to start properly');
+            }
+        });
+
+        // Give the backend time to start up
+        setTimeout(() => {
+            console.log(`[Spawn] Backend should be ready on port ${apiPort} with database: ${dbPath}`);
+        }, 2000);
+    }, 1000);
 }
 
 // Create the Electron BrowserWindow and load the React build
@@ -133,9 +151,10 @@ app.whenReady().then(async () => {
     ipcMain.handle('file-dropped', async (_e, filePath) => {
         console.log('[IPC] file-dropped triggered with →', filePath);
         if (filePath?.toLowerCase().endsWith('.db')) {
+            console.log('[IPC] file-dropped launching backend on port →', apiPort);
             startPythonBackend(filePath);
             saveLastDb(filePath);
-            console.log('[IPC] file-dropped launching backend on →', filePath);
+            console.log('[IPC] file-dropped backend launched for →', filePath);
             return filePath;
         }
         console.log('[IPC] file-dropped invalid extension');

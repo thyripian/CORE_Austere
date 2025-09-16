@@ -2,6 +2,7 @@
   "name": "core-scout",
   "version": "1.0.0",
   "description": "CORE-Scout desktop application",
+  "author": "CORE Scout Team",
   "main": "electron-main.js",
   "scripts": {
     "start": "electron .",

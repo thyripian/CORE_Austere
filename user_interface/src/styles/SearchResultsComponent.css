@@ -4,10 +4,42 @@
   border: 1px solid #263a2a;
   padding: 2rem;
   border-radius: 8px;
-  max-width: 800px;
+  max-width: 75vw;
+  width: 75vw;
   margin: 2rem auto;
   /* center within the viewport */
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+/* Custom scrollbar styling */
+.search-results-page::-webkit-scrollbar {
+  width: 8px;
+}
+
+.search-results-page::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.search-results-page::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.search-results-page::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+  .search-results-page {
+    max-width: 90vw;
+    width: 90vw;
+    padding: 1rem;
+  }
 }
 
 /* When there is NO toolbar, reduce top padding */
@@ -31,6 +63,7 @@
   color: #fff;
   border: none;
   padding: 0.5rem 1rem;
+  margin-left: 1rem;
   border-radius: 4px;
   cursor: pointer;
   font-weight: bold;
@@ -58,9 +91,11 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  padding-bottom: 2rem;
+  /* Extra space at bottom for better scrolling */
 }
 
-/* Individual “card” */
+/* Individual "card" */
 /* If you prefer each card to pop more */
 .sr-card {
   background-color: #fafafa;
@@ -69,6 +104,9 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   transition: background 0.1s ease-in-out, box-shadow 0.1s;
   margin-bottom: 1rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 .sr-card:hover {
@@ -81,6 +119,9 @@
   margin: 0;
   font-size: 1.1rem;
   color: #1a0dab;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.3;
 }
 
 .sr-card:hover .sr-title {
@@ -92,6 +133,8 @@
   font-size: 0.85rem;
   color: #006621;
   margin: 0.25rem 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 /* Snippet text */
@@ -99,6 +142,69 @@
   margin: 0;
   color: #545454;
   font-size: 0.9rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+  line-height: 1.4;
+  max-height: 4.2em;
+  /* Show about 3 lines of text */
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+/* Match information */
+.sr-matches {
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  background-color: #f8f9fa;
+  border-left: 3px solid #007bff;
+  border-radius: 0 4px 4px 0;
+}
+
+.sr-matches-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 0.25rem;
+}
+
+.sr-match-item {
+  margin: 0.25rem 0;
+  font-size: 0.85rem;
+}
+
+.sr-match-field {
+  font-weight: 600;
+  color: #007bff;
+  margin-right: 0.5rem;
+}
+
+.sr-match-value {
+  color: #495057;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.sr-match-text-highlight {
+  color: #007bff;
+  font-weight: bold;
+}
+
+.sr-match-more {
+  font-size: 0.8rem;
+  color: #6c757d;
+  font-style: italic;
+  margin-top: 0.25rem;
+}
+
+/* Score display */
+.sr-score {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #666;
+  font-style: italic;
 }
 
 /* Status messages */

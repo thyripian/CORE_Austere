@@ -6,20 +6,30 @@ export default function SettingsComponent() {
 
   // Drag & drop handler
   const onDrop = useCallback(async (e) => {
+    console.log('Drop event triggered', e);
     e.preventDefault();
     const file = e.dataTransfer.files[0];
+    console.log('Dropped file:', file);
     if (!file || !file.path.toLowerCase().endsWith('.db')) {
       setStatus('⛔ Please drop a valid .db file.');
       return;
     }
     try {
+      setStatus('🔄 Loading database...');
+      console.log('Calling loadDbFile with:', file.path);
       const returned = await window.electronAPI.loadDbFile(file.path);
+      console.log('loadDbFile returned:', returned);
       if (returned) {
-        setStatus(`✅ Loaded database: ${returned}`);
+        setStatus(`✅ Database loaded: ${returned.split('\\').pop()}`);
+        // Give the backend time to start up
+        setTimeout(() => {
+          setStatus(`✅ Database ready! Go to Search to query your data.`);
+        }, 3000);
       } else {
         setStatus('⛔ Load cancelled or invalid .db file.');
       }
     } catch (err) {
+      console.error('Error loading database:', err);
       setStatus(`❗ Error: ${err.message}`);
     }
   }, []);

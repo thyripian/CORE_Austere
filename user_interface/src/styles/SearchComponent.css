@@ -1,4 +1,47 @@
 /* src/styles/SearchComponent.css */
+
+.refresh-button {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-left: 10px;
+  transition: background-color 0.2s;
+}
+
+.refresh-button:hover {
+  background: #0056b3;
+}
+
+.refresh-button:active {
+  background: #004085;
+}
+
+.current-table {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.current-table p {
+  margin: 0;
+  font-size: 16px;
+  color: #495057;
+}
+
+.current-table strong {
+  color: #007bff;
+  font-weight: 600;
+}
+
 .search-container {
   display: flex;
   flex-direction: column;
@@ -9,6 +52,14 @@
   /* Adjust to center the content properly */
   transition: all 0.3s ease;
   /* Add a transition for smooth movement */
+}
+
+.search-container h2 {
+  margin-bottom: 0.5rem;
+}
+
+.search-description {
+  margin-bottom: 1rem;
 }
 
 .search-container.searched {
@@ -33,6 +84,26 @@
 
 .search-container.searched .search-box {
   justify-content: flex-start;
+}
+
+.search-help {
+  margin-top: 0.5rem;
+  font-size: 14px;
+  color: white;
+  background-color: #446148CC;
+  border: 1px solid #263a2a;
+  border-radius: 6px;
+  padding: 0.25rem 1rem 1rem 1rem;
+  width: 100%;
+  max-width: 1200px;
+}
+
+.search-help h4 {
+  margin: 0 0 0.5rem 0;
+}
+
+.search-help .example-queries {
+  margin-top: 0;
 }
 
 .search-input {
@@ -84,4 +155,121 @@
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   font-family: 'Roboto', sans-serif;
   /* Ensure the font is applied */
+}
+
+
+.fields-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+.field-tag {
+  display: inline-block;
+  background-color: #e9ecef;
+  color: #495057;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  border: 1px solid #dee2e6;
+  transition: background-color 0.2s ease;
+}
+
+.field-tag:hover {
+  background-color: #dee2e6;
+}
+
+/* Table information styling */
+.table-info {
+  margin: 0.5rem 0 1rem 0;
+  padding: 0.75rem;
+  background-color: #446148CC;
+  border-radius: 6px;
+  border: 1px solid #263a2a;
+  width: 100%;
+  max-width: 1200px;
+  color: white;
+}
+
+.table-info h4 {
+  margin: 0 0 0.5rem 0;
+  margin-top: -0.5rem;
+  font-size: 14px;
+  color: white;
+  font-weight: 600;
+}
+
+.info-grid {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.info-item {
+  font-size: 13px;
+  color: white;
+}
+
+.info-item strong {
+  color: white;
+  font-weight: 600;
+}
+
+
+/* Classification badge styling */
+.classification-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.classification-top-secret {
+  background-color: #b8860b;
+  color: white;
+}
+
+.classification-secret {
+  background-color: #dc3545;
+  color: white;
+}
+
+.classification-confidential {
+  background-color: #007bff;
+  color: white;
+}
+
+.classification-restricted {
+  background-color: #6f42c1;
+  color: white;
+}
+
+.classification-unclassified {
+  background-color: #28a745;
+  color: white;
+}
+
+.classification-cui {
+  background-color: #28a745;
+  color: white;
+}
+
+.classification-public {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.classification-unknown {
+  background-color: #6c757d;
+  color: white;
 }
