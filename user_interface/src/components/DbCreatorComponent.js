@@ -10,6 +10,7 @@ export default function DbCreatorComponent() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [progress, setProgress] = useState({ current: 0, total: 0, currentFile: '' });
     const [supportedFormats, setSupportedFormats] = useState([]);
+    const [loadingFormats, setLoadingFormats] = useState(true);
     const [processingOptions, setProcessingOptions] = useState({
         extractText: true,
         extractCoordinates: true,
@@ -45,12 +46,30 @@ export default function DbCreatorComponent() {
                     fileTypes: response.data
                 }));
                 console.log('[DbCreator] Successfully set supported formats');
+                setLoadingFormats(false);
             } else {
                 throw new Error('Invalid response format or empty data');
             }
         } catch (err) {
             console.error(`[DbCreator] Error fetching supported formats (attempt ${retryCount + 1}):`, err);
             console.error('[DbCreator] Error details:', err.response?.data || err.message);
+
+            // If this is the first attempt and backend might not be running, try to start it
+            if (retryCount === 0 && window.electronAPI?.backend?.start) {
+                console.log('[DbCreator] Backend might not be running, attempting to start it...');
+                try {
+                    const backendResult = await window.electronAPI.backend.start({ allowNoDatabase: true });
+                    if (backendResult.success) {
+                        console.log('[DbCreator] Backend started successfully, retrying in 3 seconds...');
+                        setTimeout(() => {
+                            fetchSupportedFormats(retryCount + 1);
+                        }, 3000);
+                        return;
+                    }
+                } catch (backendErr) {
+                    console.error('[DbCreator] Failed to start backend:', backendErr);
+                }
+            }
 
             if (retryCount < maxRetries) {
                 console.log(`[DbCreator] Retrying in 2 seconds... (attempt ${retryCount + 1}/${maxRetries})`);
@@ -61,13 +80,14 @@ export default function DbCreatorComponent() {
             }
 
             // Fallback to default formats after all retries failed
-            const fallbackFormats = ['pdf', 'txt', 'kml', 'kmz', 'doc', 'docx', 'md'];
+            const fallbackFormats = ['pdf', 'txt', 'kml', 'kmz', 'doc', 'docx', 'md', 'xlsx', 'xls', 'csv', 'json', 'xml', 'rtf', 'odt', 'ods', 'odp', 'pptx', 'ppt', 'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff'];
             console.log('[DbCreator] Using fallback formats after all retries failed:', fallbackFormats);
             setSupportedFormats(fallbackFormats);
             setProcessingOptions(prev => ({
                 ...prev,
                 fileTypes: fallbackFormats
             }));
+            setLoadingFormats(false);
         }
     };
 
@@ -197,6 +217,23 @@ export default function DbCreatorComponent() {
         }));
     };
 
+    const handleSelectAllFileTypes = () => {
+        setProcessingOptions(prev => ({
+            ...prev,
+            fileTypes: supportedFormats
+        }));
+    };
+
+    const handleDeselectAllFileTypes = () => {
+        setProcessingOptions(prev => ({
+            ...prev,
+            fileTypes: []
+        }));
+    };
+
+    const isAllSelected = processingOptions.fileTypes.length === supportedFormats.length;
+    const isNoneSelected = processingOptions.fileTypes.length === 0;
+
     return (
         <div className="db-creator-container">
             <h2>Database Creator</h2>
@@ -204,7 +241,7 @@ export default function DbCreatorComponent() {
                 Create a searchable database from a folder of documents.
                 Supports PDF, Word docs, text files, KML files, and more.
                 <br />
-                <strong>Database will be saved to your Downloads folder for easy access.</strong>
+                <em>* Database will be saved to your Downloads folder for easy access.</em>
             </p>
 
             {/* Folder Selection */}
@@ -294,31 +331,51 @@ export default function DbCreatorComponent() {
                 <div className="file-types-section">
                     <div className="file-types-header">
                         <h4>File Types to Process:</h4>
-                        <button
-                            className="refresh-formats-button"
-                            onClick={() => fetchSupportedFormats()}
-                            disabled={isProcessing}
-                            title="Refresh supported file formats"
-                        >
-                            🔄 Refresh
-                        </button>
+                        <div className="file-types-controls">
+                            <button
+                                className="refresh-formats-button"
+                                onClick={() => fetchSupportedFormats()}
+                                disabled={isProcessing}
+                                title="Refresh supported file formats"
+                            >
+                                🔄 Refresh
+                            </button>
+                            <button
+                                className="select-all-button"
+                                onClick={isAllSelected ? handleDeselectAllFileTypes : handleSelectAllFileTypes}
+                                disabled={isProcessing || supportedFormats.length === 0}
+                                title={isAllSelected ? "Deselect all file types" : "Select all file types"}
+                            >
+                                {isAllSelected ? "☐ Deselect All" : "☑ Select All"}
+                            </button>
+                        </div>
                     </div>
-                    <div className="file-types-grid">
-                        {supportedFormats.map(format => (
-                            <label key={format} className="file-type-item">
-                                <input
-                                    type="checkbox"
-                                    checked={processingOptions.fileTypes.includes(format)}
-                                    onChange={() => handleFileTypeToggle(format)}
-                                    disabled={isProcessing}
-                                />
-                                .{format}
-                            </label>
-                        ))}
-                    </div>
-                    <p className="formats-info">
-                        Showing {supportedFormats.length} supported file formats
-                    </p>
+                    {loadingFormats ? (
+                        <div className="formats-loading">
+                            <div className="loading-spinner"></div>
+                            <p>Loading supported file formats...</p>
+                            <p className="loading-subtext">Starting backend and fetching format list</p>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="file-types-grid">
+                                {supportedFormats.map(format => (
+                                    <label key={format} className="file-type-item">
+                                        <input
+                                            type="checkbox"
+                                            checked={processingOptions.fileTypes.includes(format)}
+                                            onChange={() => handleFileTypeToggle(format)}
+                                            disabled={isProcessing}
+                                        />
+                                        .{format}
+                                    </label>
+                                ))}
+                            </div>
+                            <p className="formats-info">
+                                Showing {supportedFormats.length} supported file formats
+                            </p>
+                        </>
+                    )}
                 </div>
             </div>
 

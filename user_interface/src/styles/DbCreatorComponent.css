@@ -1,12 +1,15 @@
 /* DbCreatorComponent.css */
 .db-creator-container {
     max-width: 800px;
-    margin: 0 auto;
+    margin: 2rem auto 0 auto;
     padding: 2rem;
     font-family: 'Roboto', sans-serif;
     max-height: 80vh;
     overflow-y: auto;
     position: relative;
+    background-color: #272727;
+    border-radius: 8px;
+    color: #ffffff;
 }
 
 /* Custom scrollbar styling */
@@ -29,14 +32,14 @@
 }
 
 .db-creator-container h2 {
-    color: #2c3e50;
+    color: white;
     margin-bottom: 0.5rem;
     font-size: 2rem;
     font-weight: 300;
 }
 
 .description {
-    color: #495057;
+    color: white;
     margin-bottom: 2rem;
     font-size: 1.1rem;
     line-height: 1.5;
@@ -45,20 +48,20 @@
 .section {
     margin-bottom: 2rem;
     padding: 1.5rem;
-    background: #f8f9fa;
+    background: #333;
     border-radius: 8px;
-    border: 1px solid #e9ecef;
+    border: 1px solid #555;
 }
 
 .section h3 {
-    color: #2c3e50;
+    color: #fff;
     margin-bottom: 1rem;
     font-size: 1.3rem;
     font-weight: 500;
 }
 
 .section h4 {
-    color: #343a40;
+    color: #ccc;
     margin: 1rem 0 0.5rem 0;
     font-size: 1.1rem;
     font-weight: 500;
@@ -154,16 +157,17 @@
     padding: 0.5rem;
     border-radius: 5px;
     transition: background 0.3s ease;
-    color: #343a40;
+    color: #fff;
 }
 
 .option-item:hover {
-    background: #e9ecef;
+    background: #555;
 }
 
 .option-item input[type="checkbox"] {
     margin-right: 0.5rem;
     transform: scale(1.2);
+    accent-color: #007bff;
 }
 
 .option-item:has(input:disabled) {
@@ -181,6 +185,12 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 0.5rem;
+}
+
+.file-types-controls {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
 }
 
 .refresh-formats-button {
@@ -203,11 +213,72 @@
     cursor: not-allowed;
 }
 
+.select-all-button {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.select-all-button:hover:not(:disabled) {
+    background: #0056b3;
+}
+
+.select-all-button:disabled {
+    background: #adb5bd;
+    cursor: not-allowed;
+}
+
 .formats-info {
     margin: 0.5rem 0 0 0;
     color: #6c757d;
     font-size: 0.9rem;
     font-style: italic;
+}
+
+/* Loading state for formats */
+.formats-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+    text-align: center;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.formats-loading p {
+    margin: 0.5rem 0;
+    color: #495057;
+    font-size: 1rem;
+}
+
+.loading-subtext {
+    color: #6c757d !important;
+    font-size: 0.9rem !important;
 }
 
 .file-types-grid {
@@ -225,15 +296,16 @@
     border-radius: 3px;
     transition: background 0.3s ease;
     font-size: 0.9rem;
-    color: #343a40;
+    color: #fff;
 }
 
 .file-type-item:hover {
-    background: #e9ecef;
+    background: #555;
 }
 
 .file-type-item input[type="checkbox"] {
     margin-right: 0.5rem;
+    accent-color: #007bff;
 }
 
 .file-type-item:has(input:disabled) {

@@ -444,8 +444,17 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
             nodeIntegration: false,
+            devTools: !isPackaged, // Disable dev tools in production
         },
+        show: false, // Don't show until ready
     });
+
+    // Remove menu bar in production
+    if (isPackaged) {
+        mainWindow.setMenuBarVisibility(false);
+        mainWindow.setMenu(null);
+    }
+
     // Load the React frontend - different paths for dev vs packaged
     const frontendPath = isPackaged
         ? path.join(process.resourcesPath, 'app.asar', 'user_interface', 'build', 'index.html')
@@ -453,6 +462,24 @@ function createWindow() {
 
     console.log('[Electron] Loading frontend from:', frontendPath);
     mainWindow.loadFile(frontendPath);
+
+    // Show window when ready to prevent flash
+    mainWindow.once('ready-to-show', () => {
+        mainWindow.show();
+    });
+
+    // Disable dev tools shortcuts in production
+    if (isPackaged) {
+        mainWindow.webContents.on('before-input-event', (event, input) => {
+            // Disable F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
+            if (input.key === 'F12' ||
+                (input.control && input.shift && input.key === 'I') ||
+                (input.control && input.shift && input.key === 'J') ||
+                (input.control && input.key === 'U')) {
+                event.preventDefault();
+            }
+        });
+    }
 }
 
 app.whenReady().then(async () => {
@@ -551,7 +578,8 @@ app.whenReady().then(async () => {
     ipcMain.handle('backend:start', async (event, options = {}) => {
         console.log('[IPC] backend:start called with options:', options);
 
-        if (!selectedDBPath) {
+        // Allow backend to start without database for basic endpoints like /supported-formats
+        if (!selectedDBPath && !options.allowNoDatabase) {
             return {
                 success: false,
                 error: 'No database path set. Please select a database first.',
