@@ -446,10 +446,13 @@ function createWindow() {
             nodeIntegration: false,
         },
     });
-    mainWindow.webContents.openDevTools();
-    mainWindow.loadFile(
-        path.join(__dirname, 'user_interface', 'build', 'index.html')
-    );
+    // Load the React frontend - different paths for dev vs packaged
+    const frontendPath = isPackaged
+        ? path.join(process.resourcesPath, 'app.asar', 'user_interface', 'build', 'index.html')
+        : path.join(__dirname, 'user_interface', 'build', 'index.html');
+
+    console.log('[Electron] Loading frontend from:', frontendPath);
+    mainWindow.loadFile(frontendPath);
 }
 
 app.whenReady().then(async () => {
@@ -543,29 +546,6 @@ app.whenReady().then(async () => {
         return backendReady;
     });
 
-    // IPC: Debug information
-    ipcMain.handle('debug:backendInfo', () => {
-        const backendExePath = isPackaged
-            ? path.join(process.resourcesPath, 'backend', 'core-scout-backend.exe')
-            : path.join(baseDir, 'start_backend.bat');
-
-        const info = {
-            isPackaged: isPackaged,
-            backendExePath: backendExePath,
-            fileExists: fs.existsSync(backendExePath),
-            apiPort: apiPort,
-            dbPath: selectedDBPath,
-            backendReady: backendReady,
-            processPid: pythonProcess ? pythonProcess.pid : null,
-            workingDir: isPackaged
-                ? path.join(process.resourcesPath, 'backend')
-                : baseDir,
-            logPath: path.join(app.getPath('userData'), 'logs', 'backend.log')
-        };
-
-        logBackend(`Debug info requested: ${JSON.stringify(info, null, 2)}`, 'DEBUG');
-        return info;
-    });
 
     // IPC: Start backend with current DB path
     ipcMain.handle('backend:start', async (event, options = {}) => {

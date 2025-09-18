@@ -39,8 +39,32 @@
       "output": "dist"
     },
     "win": {
-      "target": "portable",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "assets/app-icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/app-icon.ico",
+      "uninstallerIcon": "assets/app-icon.ico",
+      "installerHeaderIcon": "assets/app-icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "CORE Scout",
+      "include": "assets/installer.nsh"
     },
     "mac": {
       "target": "dmg",

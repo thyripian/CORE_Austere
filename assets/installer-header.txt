@@ -1,0 +1,1 @@
+'CORE Scout - Standalone CORE Offline Utility Tool' 

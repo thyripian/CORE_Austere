@@ -19,10 +19,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
         isReady: () => ipcRenderer.invoke('backend:isReady'),
     },
 
-    // Debug functionality
-    debug: {
-        getBackendInfo: () => ipcRenderer.invoke('debug:backendInfo'),
-    },
 
     // Shell operations
     shell: {
