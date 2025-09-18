@@ -58,12 +58,15 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
       "installerIcon": "assets/app-icon.ico",
       "uninstallerIcon": "assets/app-icon.ico",
       "installerHeaderIcon": "assets/app-icon.ico",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "CORE Scout",
+      "allowElevation": true,
+      "runAfterFinish": true,
       "include": "assets/installer.nsh"
     },
     "mac": {

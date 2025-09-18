@@ -1,6 +1,6 @@
 ; Custom NSIS installer script for CORE Scout
 !macro customInstall
-  ; Create a desktop shortcut
+  ; Create desktop shortcut
   CreateShortCut "$DESKTOP\CORE Scout.lnk" "$INSTDIR\Scout.exe" "" "$INSTDIR\Scout.exe" 0
   
   ; Create Start Menu folder
