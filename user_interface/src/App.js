@@ -9,6 +9,7 @@ import ContactComponent from './components/ContactComponent';
 import HistoryComponent from './components/HistoryComponent';
 import SettingsComponent from './components/SettingsComponent';
 import FullReportComponent from './components/FullReportComponent';
+import DbCreatorComponent from './components/DbCreatorComponent';
 import './App.css';
 
 const App = () => {
@@ -51,6 +52,8 @@ const App = () => {
         return 'settings';
       case '/search':
         return 'search';
+      case '/create':
+        return 'create';
       case '/':
         return 'home';
       default:
@@ -101,6 +104,7 @@ const App = () => {
 
         <nav>
           <Link to="/search">Search</Link>
+          <Link to="/create">Create</Link>
         </nav>
       </header>
 
@@ -111,6 +115,7 @@ const App = () => {
           <Route path="/" element={<HomeComponent />} />
           <Route path="/search" element={<SearchComponent />} />
           <Route path="/results" element={<SearchResultsComponent />} />
+          <Route path="/create" element={<DbCreatorComponent />} />
           <Route path="/about" element={<AboutComponent />} />
           <Route path="/contact" element={<ContactComponent />} />
           <Route path="/history" element={<HistoryComponent />} />

@@ -10,27 +10,42 @@ import io
 import json
 from typing import Dict, List, Any
 from fastapi import FastAPI, HTTPException, Query, Body
+from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from database_operations.dynamic_schema_manager import DynamicSchemaManager
 
+class CreateDatabaseRequest(BaseModel):
+    folderPath: str
+    dbName: str
+    options: str
+
+class SwitchDatabaseRequest(BaseModel):
+    dbPath: str = None
+
 def main():
     parser = argparse.ArgumentParser(description="CORE-Scout (Dynamic): Universal SQLite Explorer")
-    parser.add_argument("--db", "-d", required=True, help="Path to the SQLite database file")
+    parser.add_argument("--db", "-d", required=False, help="Path to the SQLite database file")
     parser.add_argument("--port", "-p", type=int, default=8000,
                     help="Port to listen on (loopback only)")
     args = parser.parse_args()
     
-    print(f"[run_app_dynamic] Opening SQLite DB at: {args.db}", flush=True)
     print(f"[run_app_dynamic] Binding FastAPI to 127.0.0.1:{args.port}", flush=True)
 
-    if not os.path.exists(args.db):
-        raise RuntimeError(f"SQLite DB not found at: {args.db}")
-
-    # Initialize dynamic schema manager
-    schema_manager = DynamicSchemaManager(args.db)
-    if not schema_manager.connect():
-        raise RuntimeError("Failed to connect to database or analyze schema")
+    # Check for database path from command line args or environment variable
+    db_path = args.db or os.getenv('DB_PATH')
+    
+    # Initialize schema manager (will be None initially)
+    global schema_manager
+    schema_manager = None
+    if db_path and os.path.exists(db_path):
+        print(f"[run_app_dynamic] Opening SQLite DB at: {db_path}", flush=True)
+        schema_manager = DynamicSchemaManager(db_path)
+        if not schema_manager.connect():
+            print(f"[run_app_dynamic] Warning: Failed to connect to database, starting without database", flush=True)
+            schema_manager = None
+    else:
+        print(f"[run_app_dynamic] Starting without database - use /switch-database to load one", flush=True)
 
     app = FastAPI(
         title="CORE-Scout Dynamic API", 
@@ -62,11 +77,16 @@ def main():
     @app.get("/schema")
     def get_schema():
         """Get complete database schema information"""
+        if not schema_manager:
+            return {"tables": {}, "total_tables": 0, "fts_available": False}
         return schema_manager.get_schema_info()
 
     @app.get("/tables")
     def get_tables():
         """Get list of all tables with metadata"""
+        if not schema_manager:
+            return []
+        
         schema_info = schema_manager.get_schema_info()
         tables = []
         
@@ -86,6 +106,9 @@ def main():
     @app.get("/tables/{table_name}")
     def get_table_info(table_name: str):
         """Get detailed information about a specific table"""
+        if not schema_manager:
+            raise HTTPException(status_code=400, detail="No database loaded")
+        
         schema_info = schema_manager.get_schema_info()
         
         if table_name not in schema_info['tables']:
@@ -96,6 +119,9 @@ def main():
     @app.get("/tables/{table_name}/fields")
     def get_table_fields(table_name: str):
         """Get field information for a table"""
+        if not schema_manager:
+            raise HTTPException(status_code=400, detail="No database loaded")
+        
         schema_info = schema_manager.get_schema_info()
         
         if table_name not in schema_info['tables']:
@@ -116,6 +142,9 @@ def main():
     ):
         """Elasticsearch-like search endpoint with full query DSL support"""
         try:
+            if not schema_manager:
+                raise HTTPException(status_code=400, detail="No database loaded")
+            
             query = search_request.get('query', '*')
             fields = search_request.get('fields')
             filters = search_request.get('filters', {})
@@ -181,6 +210,9 @@ def main():
     ):
         """Simple search endpoint for backward compatibility"""
         try:
+            if not schema_manager:
+                raise HTTPException(status_code=400, detail="No database loaded")
+            
             # Parse parameters
             search_fields = fields.split(',') if fields else None
             search_filters = json.loads(filters) if filters else {}
@@ -219,6 +251,9 @@ def main():
     ):
         """Export search results as KML file"""
         try:
+            if not schema_manager:
+                raise HTTPException(status_code=400, detail="No database loaded")
+            
             kml_bytes, metadata = schema_manager.export_kmz(
                 table_name=table_name,
                 query=q,
@@ -256,6 +291,9 @@ def main():
     ):
         """Create FTS5 index for a table"""
         try:
+            if not schema_manager:
+                raise HTTPException(status_code=400, detail="No database loaded")
+            
             success = schema_manager.create_fts_index(table_name, fields)
             if success:
                 return {"message": f"FTS5 index created for table {table_name}"}
@@ -267,10 +305,181 @@ def main():
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
 
+    @app.get("/supported-formats")
+    def get_supported_formats():
+        """Return list of supported file formats for processing."""
+        from database_operations.file_processor import FileProcessor
+        processor = FileProcessor()
+        return processor.get_supported_formats()
+    
+    @app.post("/create-database")
+    def create_database_route(request: CreateDatabaseRequest):
+        """Create a new database from files in a folder."""
+        try:
+            print(f"[CREATE-DB] Starting database creation for folder: {request.folderPath}")
+            print(f"[CREATE-DB] Database name: {request.dbName}")
+            print(f"[CREATE-DB] Options: {request.options}")
+            
+            from database_operations.file_processor import FileProcessor
+            from database_operations.sqlite_operations import SQLiteDatabase
+            
+            # Parse options if provided
+            processing_options = {}
+            if request.options:
+                try:
+                    processing_options = json.loads(request.options)
+                    print(f"[CREATE-DB] Parsed options: {processing_options}")
+                except Exception as e:
+                    print(f"[CREATE-DB] Error parsing options: {e}")
+                    processing_options = {}
+            
+            # Default options
+            default_options = {
+                'extractText': True,
+                'extractCoordinates': True,
+                'includeImages': False,
+                'recursive': True,
+                'fileTypes': ['pdf', 'txt', 'kml', 'kmz', 'doc', 'docx', 'xlsx', 'xls', 'pptx', 'ppt']
+            }
+            processing_options = {**default_options, **processing_options}
+            
+            # Initialize file processor
+            processor = FileProcessor()
+            print(f"[CREATE-DB] File processor initialized")
+            
+            # Scan folder for files
+            print(f"[CREATE-DB] Scanning folder: {request.folderPath}")
+            files = processor.scan_folder(request.folderPath, processing_options)
+            print(f"[CREATE-DB] Found {len(files)} files to process")
+            
+            if not files:
+                print(f"[CREATE-DB] No supported files found in folder: {request.folderPath}")
+                raise HTTPException(status_code=400, detail="No supported files found in the specified folder")
+            
+            # Create new database path in Downloads folder
+            downloads_path = os.path.join(os.path.expanduser("~"), "Downloads")
+            
+            # Ensure Downloads folder exists
+            if not os.path.exists(downloads_path):
+                os.makedirs(downloads_path, exist_ok=True)
+                print(f"[CREATE-DB] Created Downloads folder: {downloads_path}")
+            
+            db_path = os.path.join(downloads_path, request.dbName)
+            print(f"[CREATE-DB] Saving database to: {db_path}")
+            
+            # Create new database with basic schema
+            new_db = SQLiteDatabase(db_path)
+            new_db.connect()
+            
+            # Create reports table with standard schema
+            cursor = new_db.cursor
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS reports (
+                    id TEXT PRIMARY KEY,
+                    file_hash TEXT,
+                    highest_classification TEXT DEFAULT 'UNCLASSIFIED',
+                    caveats TEXT,
+                    file_path TEXT,
+                    locations TEXT,
+                    timeframes TEXT,
+                    subjects TEXT,
+                    topics TEXT,
+                    keywords TEXT,
+                    MGRS TEXT,
+                    images TEXT,
+                    full_text TEXT,
+                    processed_time TEXT
+                )
+            """)
+            
+            # Process files and insert into database
+            processed_count = 0
+            for file_path in files:
+                try:
+                    file_data = processor.process_file(file_path, processing_options)
+                    
+                    # Insert into database
+                    cursor.execute("""
+                        INSERT INTO reports (
+                            id, file_hash, highest_classification, caveats, file_path,
+                            locations, timeframes, subjects, topics, keywords, MGRS,
+                            images, full_text, processed_time
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        file_data["id"], file_data["file_hash"], file_data["highest_classification"],
+                        file_data["caveats"], file_data["file_path"], file_data["locations"],
+                        file_data["timeframes"], file_data["subjects"], file_data["topics"],
+                        file_data["keywords"], file_data["MGRS"], file_data["images"],
+                        file_data["full_text"], file_data["processed_time"]
+                    ))
+                    processed_count += 1
+                    
+                except Exception as e:
+                    print(f"Error processing {file_path}: {str(e)}")
+                    continue
+            
+            new_db.conn.commit()
+            new_db.conn.close()
+            
+            print(f"[CREATE-DB] Database created at: {db_path}")
+            print(f"[CREATE-DB] Files processed: {processed_count}/{len(files)}")
+            
+            return {
+                "success": True,
+                "dbPath": db_path,
+                "filesProcessed": processed_count,
+                "totalFiles": len(files),
+                "stats": processor.stats,
+                "message": f"Database created successfully: {os.path.basename(db_path)}",
+                "fullPath": os.path.abspath(db_path)
+            }
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.post("/switch-database")
+    def switch_database_route(request: SwitchDatabaseRequest):
+        """Switch to a different database."""
+        try:
+            db_path = request.dbPath
+            if not db_path or not os.path.exists(db_path):
+                raise HTTPException(status_code=404, detail=f"Database file not found: {db_path}")
+            
+            # Switch the schema manager to the new database
+            global schema_manager
+            if schema_manager:
+                success = schema_manager.switch_database(db_path)
+            else:
+                # Create new schema manager
+                schema_manager = DynamicSchemaManager(db_path)
+                success = schema_manager.connect()
+            
+            print(f"[SWITCH-DB] Switched to database: {db_path}, success: {success}")
+            
+            if not success:
+                raise HTTPException(status_code=500, detail="Failed to switch database")
+            
+            return {
+                "success": True,
+                "message": f"Switched to database: {os.path.basename(db_path)}",
+                "dbPath": db_path
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
     @app.get("/health")
     def health_check():
         """Health check endpoint"""
         try:
+            if not schema_manager:
+                return {
+                    "status": "healthy",
+                    "database_connected": False,
+                    "tables_accessible": False,
+                    "fts_available": False,
+                    "total_tables": 0
+                }
+            
             schema_info = schema_manager.get_schema_info()
             return {
                 "status": "healthy",
@@ -290,6 +499,15 @@ def main():
     def get_database_stats():
         """Get database statistics"""
         try:
+            if not schema_manager:
+                return {
+                    "total_tables": 0,
+                    "total_rows": 0,
+                    "fts_available": False,
+                    "fts_tables": [],
+                    "database_size": 0
+                }
+            
             schema_info = schema_manager.get_schema_info()
             total_rows = sum(table['row_count'] for table in schema_info['tables'].values())
             
@@ -298,7 +516,7 @@ def main():
                 "total_rows": total_rows,
                 "fts_available": schema_info['fts_available'],
                 "fts_tables": schema_info['fts_tables'],
-                "database_size": os.path.getsize(args.db) if os.path.exists(args.db) else 0
+                "database_size": os.path.getsize(schema_manager.db_path) if os.path.exists(schema_manager.db_path) else 0
             }
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
@@ -306,7 +524,8 @@ def main():
     # Cleanup on shutdown
     @app.on_event("shutdown")
     def shutdown_event():
-        schema_manager.close()
+        if schema_manager:
+            schema_manager.close()
     
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=args.port)

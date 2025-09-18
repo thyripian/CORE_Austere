@@ -21,18 +21,18 @@
     "files": [
       "electron-main.js",
       "preload.js",
-      "run_app.py",
-      "apply_schema.py",
-      "database_operations/**",
-      "config/**",
-      "assets/**",
+      "user_interface/build/**",
+      "assets/**"
+    ],
+    "extraResources": [
       {
-        "from": "user_interface/build",
-        "to": "user_interface/build",
-        "filter": [
-          "**/*"
-        ]
+        "from": "dist/core-scout-backend.exe",
+        "to": "backend/core-scout-backend.exe"
       }
+    ],
+    "asarUnpack": [
+      "**/backend/**",
+      "**/resources/backend/**"
     ],
     "directories": {
       "buildResources": "assets",

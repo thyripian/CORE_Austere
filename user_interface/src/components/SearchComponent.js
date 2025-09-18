@@ -15,10 +15,11 @@ function SearchComponent() {
 
   const navigate = useNavigate();
 
-  // Fetch available tables from the backend
-  const fetchTables = () => {
+  // Fetch available tables from the backend with retry logic
+  const fetchTables = (retryCount = 0) => {
     setLoadingTables(true);
     setTableError(null);
+    console.log(`[SearchComponent] Fetching tables (attempt ${retryCount + 1})`);
     getTables()
       .then(res => {
         console.log('Tables loaded:', res.data);
@@ -29,20 +30,79 @@ function SearchComponent() {
       })
       .catch(err => {
         console.error('Error fetching tables:', err);
-        setTableError('Unable to load tables - make sure a database is loaded');
+        if (retryCount < 3) {
+          console.log(`Retrying in 2 seconds... (attempt ${retryCount + 1}/3)`);
+          setTimeout(() => {
+            fetchTables(retryCount + 1);
+          }, 2000);
+        } else {
+          setTableError('No database loaded. Please go to Settings to load a database or Create a new one.');
+        }
       })
       .finally(() => {
-        setLoadingTables(false);
+        if (retryCount === 0) {
+          setLoadingTables(false);
+        }
       });
   };
 
-  // Fetch tables on mount
+  // Check for database path on mount and redirect if none
   useEffect(() => {
-    fetchTables();
+    const checkDatabasePath = async () => {
+      try {
+        const dbPath = await window.electronAPI.db.getPath();
+        console.log('[SearchComponent] Current DB path:', dbPath);
+
+        if (!dbPath) {
+          console.log('[SearchComponent] No database path found, redirecting to settings');
+          navigate('/settings');
+          return;
+        }
+
+        // Database path exists, proceed with fetching tables
+        console.log('[SearchComponent] Database path found, fetching tables...');
+        fetchTables();
+      } catch (error) {
+        console.error('[SearchComponent] Error checking database path:', error);
+        navigate('/settings');
+      }
+    };
+
+    checkDatabasePath();
+  }, [navigate]);
+
+  // Listen for database changes
+  useEffect(() => {
+    const handleDatabaseChange = (event) => {
+      console.log('[SearchComponent] Database changed, refreshing tables...');
+      fetchTables();
+    };
+
+    window.addEventListener('databaseChanged', handleDatabaseChange);
+
+    return () => {
+      window.removeEventListener('databaseChanged', handleDatabaseChange);
+    };
   }, []);
+
+  // Also refresh when the component becomes visible (e.g., navigating from settings)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && tables.length === 0 && !loadingTables) {
+        console.log('Page became visible, refreshing tables...');
+        fetchTables();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [tables.length, loadingTables]);
 
   // Add refresh button handler
   const handleRefresh = () => {
+    console.log('[SearchComponent] Manual refresh triggered');
+    setLoadingTables(true);
+    setTableError(null);
     fetchTables();
   };
 
@@ -90,7 +150,39 @@ function SearchComponent() {
   return (
     <div className="page-content">
       <div className="search-container">
-        {selectedTableInfo && (
+        {loadingTables && (
+          <div className="table-info">
+            <h4>Loading Database...</h4>
+            <div className="info-grid">
+              <div className="info-item">
+                <strong>Status:</strong> Connecting to backend...
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tableError && (
+          <div className="table-info">
+            <h4>No Database Loaded</h4>
+            <div className="info-grid">
+              <div className="info-item">
+                <strong>Status:</strong> {tableError}
+              </div>
+              <div className="info-item">
+                <button onClick={handleRefresh} className="refresh-button">
+                  🔄 Retry Connection
+                </button>
+              </div>
+              <div className="info-item">
+                <strong>Options:</strong>
+                <a href="/settings" className="nav-link">Load Database</a> |
+                <a href="/create" className="nav-link">Create Database</a>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {selectedTableInfo && !loadingTables && !tableError && (
           <div className="table-info">
             <h4>Database Information</h4>
             <div className="info-grid">

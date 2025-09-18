@@ -31,11 +31,25 @@
   justify-content: center;
   margin-bottom: 1.5rem;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: all 0.3s ease;
+  position: relative;
 }
 
 .upload-box:hover {
   background: #f0f0f0;
+  border-color: #007bff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+}
+
+.upload-box.loading {
+  cursor: not-allowed;
+  opacity: 0.7;
+  background: #e9ecef;
+}
+
+.upload-box:active {
+  transform: translateY(0);
 }
 
 .upload-box p {
@@ -52,11 +66,56 @@
   background-color: #007bff;
   color: white;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: all 0.2s ease;
 }
 
-.select-db-button:hover {
+.select-db-button:hover:not(:disabled) {
   background-color: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.select-db-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.supported-formats {
+  margin-top: 0.5rem;
+  opacity: 0.7;
+}
+
+.supported-formats small {
+  color: #666;
+  font-size: 0.85rem;
 }
 
 .status-text {

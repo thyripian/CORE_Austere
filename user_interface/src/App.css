@@ -37,7 +37,8 @@ body {
 .background-image.contact,
 .background-image.history,
 .background-image.results,
-.background-image.settings {
+.background-image.settings,
+.background-image.create {
   top: calc(25%);
   left: 51.3%;
   width: 30%;

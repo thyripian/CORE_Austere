@@ -119,6 +119,20 @@ class DynamicSchemaManager:
             print(f"Failed to connect to database: {e}")
             return False
 
+    def switch_database(self, new_db_path: str) -> bool:
+        """Switch to a different database"""
+        try:
+            # Close current connection
+            if self.conn:
+                self.conn.close()
+            
+            # Update path and connect to new database
+            self.db_path = new_db_path
+            return self.connect()
+        except Exception as e:
+            print(f"Failed to switch database: {e}")
+            return False
+
     def _analyze_schema(self):
         """Analyze database schema and build field mappings"""
         if not self.conn:
