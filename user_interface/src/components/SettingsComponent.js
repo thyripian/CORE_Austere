@@ -1,11 +1,10 @@
 import React, { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import '../styles/SettingsComponent.css';
 
 export default function SettingsComponent() {
   const [status, setStatus] = useState('No database loaded.');
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
+  const [isProcessing, setIsProcessing] = useState(false); // Prevent double calls
 
   // Drag & drop handler
   const onDrop = useCallback(async (e) => {
@@ -26,6 +25,12 @@ export default function SettingsComponent() {
       return;
     }
 
+    // Prevent click event from firing after drop
+    e.target.style.pointerEvents = 'none';
+    setTimeout(() => {
+      e.target.style.pointerEvents = 'auto';
+    }, 100);
+
     await handleFileSelection(file.path);
   }, []);
 
@@ -41,6 +46,12 @@ export default function SettingsComponent() {
 
   // Handle file selection (both drag & drop and browse)
   const handleFileSelection = useCallback(async (filePath) => {
+    if (isProcessing) {
+      console.log('Already processing a file, ignoring duplicate call');
+      return;
+    }
+
+    setIsProcessing(true);
     setIsLoading(true);
     setStatus('🔄 Loading database...');
 
@@ -53,11 +64,21 @@ export default function SettingsComponent() {
         return;
       }
 
-      // Start the backend with the selected database
-      const backendResult = await window.electronAPI.backend.start();
+      // Backend should always be restarted by db:setPath, so just wait for it to be ready
+      setStatus(`🔄 Loading database... Please wait...`);
 
-      if (!backendResult.success) {
-        setStatus(`❌ ${backendResult.error}`);
+      // Wait for backend to be ready
+      let attempts = 0;
+      const maxAttempts = 20; // 10 seconds
+      while (attempts < maxAttempts) {
+        const isReady = await window.electronAPI.backend.isReady();
+        if (isReady) break;
+        await new Promise(resolve => setTimeout(resolve, 500));
+        attempts++;
+      }
+
+      if (attempts >= maxAttempts) {
+        setStatus(`❌ Backend failed to start properly`);
         return;
       }
 
@@ -68,18 +89,16 @@ export default function SettingsComponent() {
         detail: { dbPath: filePath }
       }));
 
-      // Navigate to search page after a short delay
-      setTimeout(() => {
-        navigate('/search');
-      }, 1500);
+      // Database loaded successfully - user can navigate manually
 
     } catch (err) {
       console.error('Error selecting database:', err);
       setStatus(`❗ Error: ${err.message}`);
     } finally {
       setIsLoading(false);
+      setIsProcessing(false);
     }
-  }, [navigate]);
+  }, [isProcessing]);
 
   // Browse… button & box click both call this
   const handleBrowse = useCallback(async () => {
@@ -103,7 +122,6 @@ export default function SettingsComponent() {
         onDrop={onDrop}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
-        onClick={handleBrowse}
       >
         {isLoading ? (
           <div className="loading-content">

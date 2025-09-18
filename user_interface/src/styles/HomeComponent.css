@@ -45,6 +45,42 @@
   z-index: 1000;
 }
 
+.backend-error {
+  background: #ffebee;
+  border: 2px solid #f44336;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px;
+  max-width: 600px;
+  text-align: left;
+}
+
+.backend-error h3 {
+  color: #d32f2f;
+  margin: 0 0 10px 0;
+  font-size: 1.2em;
+}
+
+.backend-error p {
+  color: #666;
+  margin: 5px 0;
+  font-size: 0.9em;
+}
+
+.backend-error button {
+  background: #f44336;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.backend-error button:hover {
+  background: #d32f2f;
+}
+
 .db-status-toast {
   position: fixed;
   bottom: 20px;

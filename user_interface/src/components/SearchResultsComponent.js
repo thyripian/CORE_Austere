@@ -7,7 +7,8 @@ import '../styles/SearchResultsComponent.css';
 export default function SearchResultsComponent() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { query, table, searchFields, advancedSearch } = location.state || {};
+  // Get search parameters from window.searchParams instead of navigation state
+  const { query, table, searchFields, advancedSearch } = window.searchParams || {};
 
   const [searchResult, setSearchResult] = useState(null);
   const [status, setStatus] = useState('Loading results…');

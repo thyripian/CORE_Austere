@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, shell } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
     // Dialog operations
@@ -22,6 +22,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Debug functionality
     debug: {
         getBackendInfo: () => ipcRenderer.invoke('debug:backendInfo'),
+    },
+
+    // Shell operations
+    shell: {
+        openPath: (path) => shell.openPath(path),
     },
 
     // Legacy API for backward compatibility

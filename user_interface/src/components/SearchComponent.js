@@ -53,50 +53,24 @@ function SearchComponent() {
         const dbPath = await window.electronAPI.db.getPath();
         console.log('[SearchComponent] Current DB path:', dbPath);
 
-        if (!dbPath) {
-          console.log('[SearchComponent] No database path found, redirecting to settings');
-          navigate('/settings');
-          return;
+        if (dbPath) {
+          // Database path exists, proceed with fetching tables
+          console.log('[SearchComponent] Database path found, fetching tables...');
+          fetchTables();
+        } else {
+          console.log('[SearchComponent] No database path found, showing empty state');
         }
-
-        // Database path exists, proceed with fetching tables
-        console.log('[SearchComponent] Database path found, fetching tables...');
-        fetchTables();
       } catch (error) {
         console.error('[SearchComponent] Error checking database path:', error);
-        navigate('/settings');
       }
     };
 
     checkDatabasePath();
-  }, [navigate]);
+  }, []); // Empty dependency array - only run on mount
 
-  // Listen for database changes
-  useEffect(() => {
-    const handleDatabaseChange = (event) => {
-      console.log('[SearchComponent] Database changed, refreshing tables...');
-      fetchTables();
-    };
+  // Database changes are handled manually by user navigation
 
-    window.addEventListener('databaseChanged', handleDatabaseChange);
-
-    return () => {
-      window.removeEventListener('databaseChanged', handleDatabaseChange);
-    };
-  }, []);
-
-  // Also refresh when the component becomes visible (e.g., navigating from settings)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && tables.length === 0 && !loadingTables) {
-        console.log('Page became visible, refreshing tables...');
-        fetchTables();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [tables.length, loadingTables]);
+  // Visibility changes are handled manually by user navigation
 
   // Add refresh button handler
   const handleRefresh = () => {
@@ -129,14 +103,16 @@ function SearchComponent() {
     // Use wildcard query if search field is empty to return all records
     const searchQuery = query.trim() || '*';
 
-    navigate('/results', {
-      state: {
-        query: searchQuery,
-        table: selectedTable,
-        searchFields: null, // Use universal search across all fields
-        advancedSearch: false
-      }
-    });
+    // Store search parameters for results component to pick up
+    window.searchParams = {
+      query: searchQuery,
+      table: selectedTable,
+      searchFields: null, // Use universal search across all fields
+      advancedSearch: false
+    };
+
+    // Navigate to results page to show search results
+    navigate('/results');
   };
 
   const handleKeyDown = (e) => {

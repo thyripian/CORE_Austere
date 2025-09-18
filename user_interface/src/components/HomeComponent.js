@@ -30,7 +30,7 @@ const HomeComponent = () => {
     };
 
     window.addEventListener('backend-error', handleBackendError);
-    
+
     return () => {
       window.removeEventListener('backend-error', handleBackendError);
     };

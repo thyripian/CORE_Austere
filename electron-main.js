@@ -14,9 +14,12 @@ let apiPort = null;
 let selectedDBPath = null; // Single source of truth for DB path
 let backendReady = false; // Health gate flag
 let logStream = null; // Log file stream
+let isRestarting = false; // Flag to prevent double-restart
+let killTimeout = null; // Store timeout ID for clearing
+let isShuttingDown = false; // Flag to track app shutdown
 
 // Path to save last-used DB
-const isPackaged = __dirname.includes('dist');
+const isPackaged = app.isPackaged;
 const baseDir = isPackaged ? path.join(process.resourcesPath, '..') : __dirname;
 const configFile = path.join(baseDir, 'config', 'settings_lite.json');
 
@@ -34,7 +37,7 @@ function setupLogging() {
 function logBackend(message, type = 'INFO') {
     const timestamp = new Date().toISOString();
     const logMessage = `[${timestamp}] [${type}] ${message}\n`;
-    
+
     console.log(`[Backend] ${message}`);
     if (logStream) {
         logStream.write(logMessage);
@@ -43,12 +46,17 @@ function logBackend(message, type = 'INFO') {
 
 // Show backend error in UI
 function showBackendError(title, message) {
-    if (mainWindow) {
-        mainWindow.webContents.send('backend-error', {
-            title: title,
-            message: message,
-            logPath: path.join(app.getPath('userData'), 'logs', 'backend.log')
-        });
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        try {
+            mainWindow.webContents.send('backend-error', {
+                title: title,
+                message: message,
+                logPath: path.join(app.getPath('userData'), 'logs', 'backend.log')
+            });
+        } catch (err) {
+            // Window might be destroyed during send, ignore the error
+            console.log('[Backend] Could not send error to window (window destroyed)');
+        }
     }
 }
 
@@ -98,16 +106,66 @@ function getPythonExecutable() {
 }
 
 // Launch or relaunch the Python FastAPI backend on the given port
-function startPythonBackend(dbPath = null) {
+async function startPythonBackend(dbPath = null) {
+    // Generate a fresh port for each restart to avoid conflicts
+    apiPort = await getFreePort();
+    logBackend(`Generated fresh API port: ${apiPort}`, 'INFO');
+
     if (pythonProcess) {
-        logBackend('Killing existing backend process', 'INFO');
-        pythonProcess.kill();
+        logBackend(`Killing existing backend process (PID: ${pythonProcess.pid})`, 'INFO');
+
+        // On Windows, use taskkill to force-kill the process
+        if (process.platform === 'win32') {
+            try {
+                const { exec } = require('child_process');
+                await new Promise((resolve) => {
+                    exec(`taskkill /F /PID ${pythonProcess.pid}`, (error, stdout, stderr) => {
+                        if (error) {
+                            logBackend(`taskkill failed: ${error.message}`, 'WARN');
+                        } else {
+                            logBackend(`taskkill succeeded: ${stdout}`, 'INFO');
+                        }
+                        resolve(); // Always resolve, even on error
+                    });
+                });
+            } catch (err) {
+                logBackend(`taskkill error: ${err.message}`, 'ERROR');
+                pythonProcess.kill('SIGTERM');
+            }
+        } else {
+            pythonProcess.kill('SIGTERM');
+        }
+
+        // Wait for the process to actually die
+        await new Promise((resolve) => {
+            const checkInterval = setInterval(() => {
+                if (!pythonProcess || pythonProcess.killed || pythonProcess.exitCode !== null) {
+                    clearInterval(checkInterval);
+                    if (killTimeout) clearTimeout(killTimeout);
+                    resolve();
+                }
+            }, 50); // Check more frequently
+
+            // Force kill after 2 seconds if it's still alive
+            killTimeout = setTimeout(() => {
+                if (pythonProcess && !pythonProcess.killed && pythonProcess.exitCode === null) {
+                    logBackend(`Force killing backend process (PID: ${pythonProcess.pid})`, 'INFO');
+                    pythonProcess.kill('SIGKILL');
+                }
+                clearInterval(checkInterval);
+                resolve();
+            }, 2000);
+        });
+
         pythonProcess = null;
         backendReady = false;
+
+        // Give the OS more time to release the port
+        await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
-    // Give a moment for the process to fully terminate
-    setTimeout(() => {
+    // Start the new process after the old one is dead
+    (() => {
         let backendExePath;
         let workingDir;
 
@@ -115,7 +173,7 @@ function startPythonBackend(dbPath = null) {
             // For packaged app, resolve backend EXE path
             backendExePath = path.join(process.resourcesPath, 'backend', 'core-scout-backend.exe');
             workingDir = path.join(process.resourcesPath, 'backend');
-            
+
             logBackend(`Running in packaged mode`, 'INFO');
             logBackend(`Resolved backend EXE path: ${backendExePath}`, 'INFO');
             logBackend(`Working directory: ${workingDir}`, 'INFO');
@@ -159,10 +217,10 @@ pause`;
                 cwd: baseDir,
                 stdio: 'pipe',
                 shell: true,
-                env: { 
-                    ...process.env, 
+                env: {
+                    ...process.env,
                     API_PORT: apiPort.toString(),
-                    DB_PATH: dbPath || '' 
+                    DB_PATH: dbPath || ''
                 }
             });
         }
@@ -181,7 +239,11 @@ pause`;
             logBackend(`  Working directory: ${workingDir}`, 'INFO');
 
             try {
-                pythonProcess = spawn(backendExePath, [], {
+                // Pass API_PORT explicitly as a CLI arg to avoid any env/default mismatch
+                const spawnArgs = ['--port', String(apiPort)];
+                if (dbPath) spawnArgs.push('--db', dbPath);
+                logBackend(`Spawning command: ${backendExePath} ${spawnArgs.join(' ')}`, 'INFO');
+                pythonProcess = spawn(backendExePath, spawnArgs, {
                     cwd: workingDir,
                     stdio: 'pipe',
                     shell: false,
@@ -208,17 +270,24 @@ pause`;
         pythonProcess.on('exit', (code, signal) => {
             const exitMsg = `Backend process exited with code ${code}${signal ? `, signal ${signal}` : ''}`;
             logBackend(exitMsg, code === 0 ? 'INFO' : 'ERROR');
-            
-            if (code !== 0) {
+
+            // Only show error if it's not a normal shutdown (SIGTERM/SIGKILL) and app is still running
+            if (code !== 0 && code !== null && !isShuttingDown) {
                 const errorMsg = `Backend failed to start properly - exit code: ${code}`;
                 logBackend(errorMsg, 'ERROR');
                 showBackendError('Backend startup failed', errorMsg);
             }
             backendReady = false;
+            isRestarting = false; // Reset restart flag when process exits
         });
 
         pythonProcess.on('spawn', () => {
             logBackend(`Backend process spawned successfully (PID: ${pythonProcess.pid})`, 'INFO');
+            isRestarting = false; // Reset restart flag when process actually spawns
+            if (killTimeout) {
+                clearTimeout(killTimeout); // Clear any pending kill timeout
+                killTimeout = null;
+            }
         });
 
         // Capture stdout and stderr
@@ -242,7 +311,7 @@ pause`;
 
         // Start enhanced health check with exponential backoff
         checkBackendHealthWithRetry();
-    }, 1000);
+    })();
 }
 
 // Enhanced health check with exponential backoff
@@ -255,12 +324,12 @@ function checkBackendHealthWithRetry() {
     const checkHealth = () => {
         attempts++;
         const elapsed = Date.now() - startTime;
-        
+
         // Calculate exponential backoff delay (300ms to 2000ms)
         const baseDelay = 300;
         const maxDelay = 2000;
         const delay = Math.min(baseDelay * Math.pow(1.5, attempts - 1), maxDelay);
-        
+
         logBackend(`Health check attempt ${attempts}/${maxAttempts} (elapsed: ${elapsed}ms)`, 'DEBUG');
 
         const options = {
@@ -275,7 +344,7 @@ function checkBackendHealthWithRetry() {
             if (res.statusCode === 200) {
                 logBackend(`Backend is ready! Responding on port ${apiPort} after ${attempts} attempts`, 'INFO');
                 backendReady = true;
-                
+
                 // Notify renderer that backend is ready
                 if (mainWindow) {
                     mainWindow.webContents.send('backend-ready', {
@@ -388,9 +457,7 @@ app.whenReady().then(async () => {
     setupLogging();
     logBackend('CORE Scout starting up', 'INFO');
 
-    // 2) Pick a free port
-    apiPort = await getFreePort();
-    logBackend(`Chosen API port: ${apiPort}`, 'INFO');
+    // Port will be generated when backend starts
 
     // 3) Load saved database path
     selectedDBPath = loadLastDb();
@@ -428,6 +495,8 @@ app.whenReady().then(async () => {
     // IPC: Set database path (for drag & drop)
     ipcMain.handle('db:setPath', async (event, absPath) => {
         console.log('[IPC] db:setPath called with:', absPath);
+        console.log('[IPC] db:setPath - Current pythonProcess PID:', pythonProcess?.pid);
+        console.log('[IPC] db:setPath - isRestarting flag:', isRestarting);
         if (!absPath) {
             selectedDBPath = null;
             return { success: false, error: 'No path provided' };
@@ -445,10 +514,21 @@ app.whenReady().then(async () => {
             return { success: false, error: 'File does not exist' };
         }
 
+        const oldPath = selectedDBPath;
         selectedDBPath = absPath;
         saveLastDb(absPath);
         console.log('[IPC] db:setPath set to:', selectedDBPath);
-        return { success: true, path: selectedDBPath };
+
+        // Always restart backend when database path is set (first time or change)
+        if (!isRestarting) {
+            logBackend(`Database set to ${absPath}. Starting/restarting backend...`, 'INFO');
+            isRestarting = true;
+            backendReady = false;
+            startPythonBackend(absPath);
+            return { success: true, path: selectedDBPath, restarted: true };
+        }
+
+        return { success: true, path: selectedDBPath, restarted: false };
     });
 
     // IPC: Get current database path
@@ -465,10 +545,10 @@ app.whenReady().then(async () => {
 
     // IPC: Debug information
     ipcMain.handle('debug:backendInfo', () => {
-        const backendExePath = isPackaged 
+        const backendExePath = isPackaged
             ? path.join(process.resourcesPath, 'backend', 'core-scout-backend.exe')
             : path.join(baseDir, 'start_backend.bat');
-        
+
         const info = {
             isPackaged: isPackaged,
             backendExePath: backendExePath,
@@ -477,12 +557,12 @@ app.whenReady().then(async () => {
             dbPath: selectedDBPath,
             backendReady: backendReady,
             processPid: pythonProcess ? pythonProcess.pid : null,
-            workingDir: isPackaged 
+            workingDir: isPackaged
                 ? path.join(process.resourcesPath, 'backend')
                 : baseDir,
             logPath: path.join(app.getPath('userData'), 'logs', 'backend.log')
         };
-        
+
         logBackend(`Debug info requested: ${JSON.stringify(info, null, 2)}`, 'DEBUG');
         return info;
     });
@@ -500,6 +580,16 @@ app.whenReady().then(async () => {
         }
 
         if (pythonProcess) {
+            if (isRestarting) {
+                console.log('[IPC] backend:start - backend is restarting, please wait');
+                return {
+                    success: true,
+                    status: 'restarting',
+                    db: selectedDBPath,
+                    pid: pythonProcess.pid
+                };
+            }
+
             console.log('[IPC] backend:start - backend already running');
             return {
                 success: true,
@@ -510,7 +600,7 @@ app.whenReady().then(async () => {
         }
 
         try {
-            startPythonBackend(selectedDBPath);
+            await startPythonBackend(selectedDBPath);
             // Give it a moment to start
             await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -568,6 +658,7 @@ app.whenReady().then(async () => {
 
     // 7) IPC: Quit
     ipcMain.on('app:quit', () => {
+        isShuttingDown = true;
         if (pythonProcess) pythonProcess.kill();
         app.quit();
     });
@@ -582,6 +673,7 @@ app.whenReady().then(async () => {
 
 // Clean shutdown on all windows closed
 app.on('window-all-closed', () => {
+    isShuttingDown = true;
     if (pythonProcess) pythonProcess.kill();
     if (process.platform !== 'darwin') app.quit();
 });

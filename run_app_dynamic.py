@@ -26,7 +26,9 @@ class SwitchDatabaseRequest(BaseModel):
 def main():
     parser = argparse.ArgumentParser(description="CORE-Scout (Dynamic): Universal SQLite Explorer")
     parser.add_argument("--db", "-d", required=False, help="Path to the SQLite database file")
-    parser.add_argument("--port", "-p", type=int, default=8000,
+    # Default port comes from environment variable API_PORT if available
+    default_port = int(os.getenv('API_PORT', '8000'))
+    parser.add_argument("--port", "-p", type=int, default=default_port,
                     help="Port to listen on (loopback only)")
     args = parser.parse_args()
     

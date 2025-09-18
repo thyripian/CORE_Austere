@@ -205,10 +205,10 @@
 }
 
 .info-grid {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 1rem;
-  flex-wrap: wrap;
-  justify-content: center;
+  align-items: start;
 }
 
 .info-item {
