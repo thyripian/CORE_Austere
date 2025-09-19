@@ -1,6 +1,6 @@
 {
   "name": "core-scout",
-  "version": "1.1.0",
+  "version": "1.1.2",
   "description": "CORE-Scout desktop application",
   "author": "CORE Scout Team",
   "main": "electron-main.js",

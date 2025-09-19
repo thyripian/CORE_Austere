@@ -67,5 +67,10 @@ Thumbs.db
 *.log
 *.tsbuildinfo
 
+# === Test Files ===
+test_database.db
+
+# === Batch Files ===
+*.bat
 
 venv/

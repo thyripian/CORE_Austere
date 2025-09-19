@@ -6,7 +6,6 @@ import SearchComponent from './components/SearchComponent';
 import SearchResultsComponent from './components/SearchResultsComponent';
 import AboutComponent from './components/AboutComponent';
 import ContactComponent from './components/ContactComponent';
-import HistoryComponent from './components/HistoryComponent';
 import SettingsComponent from './components/SettingsComponent';
 import FullReportComponent from './components/FullReportComponent';
 import DbCreatorComponent from './components/DbCreatorComponent';
@@ -44,8 +43,6 @@ const App = () => {
         return 'about';
       case '/contact':
         return 'contact';
-      case '/history':
-        return 'history';
       case '/results':
         return 'results';
       case '/settings':
@@ -118,7 +115,6 @@ const App = () => {
           <Route path="/create" element={<DbCreatorComponent />} />
           <Route path="/about" element={<AboutComponent />} />
           <Route path="/contact" element={<ContactComponent />} />
-          <Route path="/history" element={<HistoryComponent />} />
           <Route path="/settings" element={<SettingsComponent />} />
           <Route path="/report/:reportId" element={<FullReportComponent />} />
         </Routes>
